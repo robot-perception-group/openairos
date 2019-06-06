@@ -9,7 +9,7 @@ timestep_limit_per_episode = 10000 # Can be any Value
 
 register(
         id='MyTurtleBot2Wall-v0',
-        entry_point='openai_ros:task_envs.turtlebot2.turtlebot2_wall.TurtleBot2WallEnv',
+        entry_point='openai_ros.task_envs.turtlebot2.turtlebot2_wall:TurtleBot2WallEnv',
         timestep_limit=timestep_limit_per_episode,
     )
 

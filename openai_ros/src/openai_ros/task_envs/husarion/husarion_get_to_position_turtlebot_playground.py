@@ -15,7 +15,7 @@ timestep_limit_per_episode = 10000 # Can be any Value
 
 register(
         id='HusarionGetToPosTurtleBotPlayGround-v0',
-        entry_point='openai_ros:task_envs.husarion.husarion_get_to_position_turtlebot_playground.HusarionGetToPosTurtleBotPlayGroundEnv',
+        entry_point='openai_ros.task_envs.husarion.husarion_get_to_position_turtlebot_playground:HusarionGetToPosTurtleBotPlayGroundEnv',
         timestep_limit=timestep_limit_per_episode,
     )
 

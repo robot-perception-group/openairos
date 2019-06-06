@@ -11,7 +11,7 @@ timestep_limit_per_episode = 10000 # Can be any Value
 
 register(
         id='IriWamTcpToBowl-v0',
-        entry_point='openai_ros:task_envs.iriwam.tcp_to_bowl.IriWamTcpToBowlEnv',
+        entry_point='openai_ros.task_envs.iriwam.tcp_to_bowl:IriWamTcpToBowlEnv',
         timestep_limit=timestep_limit_per_episode,
     )
 

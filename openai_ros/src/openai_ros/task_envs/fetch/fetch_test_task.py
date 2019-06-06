@@ -10,7 +10,7 @@ from sensor_msgs.msg import JointState
 
 register(
         id='FetchTest-v0',
-        entry_point='openai_ros:task_envs.fetch.fetch_test_task.FetchTestEnv',
+        entry_point='openai_ros.task_envs.fetch.fetch_test_task:FetchTestEnv',
         timestep_limit=50,
     )
     
