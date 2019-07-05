@@ -10,7 +10,7 @@ import numpy as np
 register(
         id='CartPoleStayUp-v0',
         entry_point='openai_ros.task_envs.cartpole_stay_up.stay_up:CartPoleStayUpEnv',
-        timestep_limit=1000,
+        max_episode_steps=1000,
     )
 
 class CartPoleStayUpEnv(cartpole_env.CartPoleEnv):

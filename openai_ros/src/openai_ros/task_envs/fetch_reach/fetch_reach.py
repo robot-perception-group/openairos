@@ -14,7 +14,7 @@ from fetch_train.srv import EePose, EePoseRequest, EeRpy, EeRpyRequest, EeTraj, 
 register(
         id='FetchReach-v0',
         entry_point='openai_ros.task_envs.fetch_reach.fetch_reach:FetchReachEnv',
-        timestep_limit=1000,
+        max_episode_steps=1000,
     )
 
 
