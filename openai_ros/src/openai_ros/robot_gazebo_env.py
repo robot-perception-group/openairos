@@ -43,7 +43,7 @@ class RobotGazeboEnv(gym.Env):
         simulation and get the observations result of performing that action.
         """
         rospy.logdebug("START STEP OpenAIROS")
-        
+
         self.gazebo.unpauseSim()
         self._set_action(action)
         self.gazebo.pauseSim()
@@ -77,20 +77,20 @@ class RobotGazeboEnv(gym.Env):
 
     def _update_episode(self):
         """
-        Publishes the cumulated reward of the episode and 
+        Publishes the cumulated reward of the episode and
         increases the episode number by one.
         :return:
         """
-        rospy.logwarn("PUBLISHING REWARD...")
+        rospy.logdebug("PUBLISHING REWARD...")
         self._publish_reward_topic(
                                     self.cumulated_episode_reward,
                                     self.episode_num
                                     )
-        rospy.logwarn("PUBLISHING REWARD...DONE="+str(self.cumulated_episode_reward)+",EP="+str(self.episode_num))
-        
+        rospy.logdebug("PUBLISHING REWARD...DONE="+str(self.cumulated_episode_reward)+",EP="+str(self.episode_num))
+
         self.episode_num += 1
         self.cumulated_episode_reward = 0
-        
+
 
     def _publish_reward_topic(self, reward, episode_number=1):
         """
@@ -124,9 +124,9 @@ class RobotGazeboEnv(gym.Env):
             self.controllers_object.reset_controllers()
             self._check_all_systems_ready()
             self.gazebo.pauseSim()
-            
+
         else:
-            rospy.logwarn("DONT RESET CONTROLLERS")
+            rospy.logdebug("DONT RESET CONTROLLERS")
             self.gazebo.unpauseSim()
             self._check_all_systems_ready()
             self._set_init_pose()
@@ -135,7 +135,7 @@ class RobotGazeboEnv(gym.Env):
             self.gazebo.unpauseSim()
             self._check_all_systems_ready()
             self.gazebo.pauseSim()
-        
+
         rospy.logdebug("RESET SIM END")
         return True
 

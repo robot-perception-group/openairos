@@ -31,18 +31,18 @@ class GazeboConnection():
         self.pauseSim()
 
     def pauseSim(self):
-        rospy.logwarn("PAUSING START")
+        rospy.logdebug("PAUSING START")
         rospy.wait_for_service('/gazebo/pause_physics')
-        rospy.logwarn("PAUSING service found...")
+        rospy.logdebug("PAUSING service found...")
         paused_done = False
         counter = 0
         while not paused_done and not rospy.is_shutdown():
             if counter < self._max_retry:
                 try:
-                    rospy.logwarn("PAUSING service calling...")
+                    rospy.logdebug("PAUSING service calling...")
                     self.pause()
                     paused_done = True
-                    rospy.logwarn("PAUSING service calling...DONE")
+                    rospy.logdebug("PAUSING service calling...DONE")
                 except rospy.ServiceException as e:
                     counter += 1
                     rospy.logerr("/gazebo/pause_physics service call failed")
@@ -54,18 +54,18 @@ class GazeboConnection():
         rospy.logdebug("PAUSING FINISH")
 
     def unpauseSim(self):
-        rospy.logwarn("UNPAUSING START")
+        rospy.logdebug("UNPAUSING START")
         rospy.wait_for_service('/gazebo/unpause_physics')
-        rospy.logwarn("UNPAUSING service found...")
+        rospy.logdebug("UNPAUSING service found...")
         unpaused_done = False
         counter = 0
         while not unpaused_done and not rospy.is_shutdown():
             if counter < self._max_retry:
                 try:
-                    rospy.logwarn("UNPAUSING service calling...")
+                    rospy.logdebug("UNPAUSING service calling...")
                     self.unpause()
                     unpaused_done = True
-                    rospy.logwarn("UNPAUSING service calling...DONE")
+                    rospy.logdebug("UNPAUSING service calling...DONE")
                 except rospy.ServiceException as e:
                     counter += 1
                     rospy.logerr("/gazebo/unpause_physics service call failed...Retrying "+str(counter))
@@ -85,15 +85,15 @@ class GazeboConnection():
         systems.
         """
         if self.reset_world_or_sim == "SIMULATION":
-            rospy.logerr("SIMULATION RESET")
+            rospy.logdebug("SIMULATION RESET")
             self.resetSimulation()
         elif self.reset_world_or_sim == "WORLD":
-            rospy.logerr("WORLD RESET")
+            rospy.logdebug("WORLD RESET")
             self.resetWorld()
         elif self.reset_world_or_sim == "NO_RESET_SIM":
-            rospy.logerr("NO RESET SIMULATION SELECTED")
+            rospy.logdebug("NO RESET SIMULATION SELECTED")
         else:
-            rospy.logerr("WRONG Reset Option:"+str(self.reset_world_or_sim))
+            rospy.logdebug("WRONG Reset Option:"+str(self.reset_world_or_sim))
 
     def resetSimulation(self):
         rospy.wait_for_service('/gazebo/reset_simulation')
