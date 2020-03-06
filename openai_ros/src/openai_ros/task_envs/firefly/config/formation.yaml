@@ -1,0 +1,37 @@
+actions : continuous # Forward, Backward, Up, Down, Left, Right or LTI controls
+pretrain: false
+desired_distance: 7 #from target person
+desired_height: -7 #from target person
+
+episode_steps : 1000000
+person_lost_threshold: 50
+happiness_threshold: 600
+flow_threshold: 50 #rate of change of person in pixels
+
+work_space:
+  max: 20
+  min: -20
+  max_v: 10
+  min_v: -10
+  vx_max: 5
+  vx_min: -5
+  vy_max: 5
+  vy_min: -5
+  vz_max: 1
+  vz_min: -1
+
+prediction_horizon: 5 #the look-ahead distance for generating way-points for the position controller
+
+image_width: 2040
+image_height: 1086
+
+# how much of the image should have the person
+desired_height_ratio: 0.25
+
+forwards_reward: 2 # Points Given to go forwards
+desired_distance_reward: 3 #Points given to achieve a desired distance to target
+desired_velocity_reward: 1 #Points given to smoothly track a desired distance to target
+image_centering_reward: 0.5 #Points given to center the person in the image
+joint_detections_reward_gain: 10 #gain value for sum of joint detection probabilities
+desired_height_reward: 10 #Points given to maintain a desired person height in image
+surface_reward : 0.5 #Reward for consistently doing all the above mentioned tasks for happiness_threshold steps

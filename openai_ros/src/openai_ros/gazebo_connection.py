@@ -7,10 +7,13 @@ from gazebo_msgs.srv import SetPhysicsProperties, SetPhysicsPropertiesRequest
 from std_msgs.msg import Float64
 from geometry_msgs.msg import Vector3
 
+from uav_msgs.msg import uav_pose
+import numpy as np
+
 class GazeboConnection():
-    
-    def __init__(self, start_init_physics_parameters, reset_world_or_sim):
-        
+
+    def __init__(self, start_init_physics_parameters, reset_world_or_sim, robotID=1):
+
         self.unpause = rospy.ServiceProxy('/gazebo/unpause_physics', Empty)
         self.pause = rospy.ServiceProxy('/gazebo/pause_physics', Empty)
         self.reset_simulation_proxy = rospy.ServiceProxy('/gazebo/reset_simulation', Empty)
@@ -25,26 +28,59 @@ class GazeboConnection():
         self.set_physics = rospy.ServiceProxy(service_name, SetPhysicsProperties)
         self.start_init_physics_parameters = start_init_physics_parameters
         self.reset_world_or_sim = reset_world_or_sim
-        self.init_values()
+        self.create_circle(radius=5)
+        machine_name = '/machine_'+str(robotID);
+        self.command_topic = machine_name+"/command"
+        self._cmd_vel_pub = rospy.Publisher(self.command_topic, uav_pose, queue_size=1)
+        outPose = uav_pose()
+        outPose.header.stamp = rospy.Time.now()
+        outPose.header.frame_id="world"
+
+        outPose.POI.x = 0
+        outPose.POI.y = 0
+        outPose.POI.z = 0
+
+        x = np.random.choice(63,1);y = np.random.choice(63,1)
+        r = 6#np.random.randint(6,6);
+        t = np.random.choice(63,1);
+        # outPose.position.x = r*np.cos(self.theta[t[0]])
+        # outPose.position.y = r*np.sin(self.theta[t[0]])
+        # outPose.position.z = -r
+        outPose.position.x = r*np.cos(self.theta[t[0]])
+        outPose.position.y = r*np.sin(self.theta[t[0]])
+        outPose.position.z = -r
+        self._cmd_vel_pub.publish(outPose)        
+        self.init_values(robotID)
         # We always pause the simulation, important for legged robots learning
         self.pauseSim()
 
     def pauseSim(self):
+        rospy.logdebug("PAUSING START")
         rospy.wait_for_service('/gazebo/pause_physics')
         try:
             self.pause()
         except rospy.ServiceException as e:
             print ("/gazebo/pause_physics service call failed")
-        
+
+        rospy.logdebug("PAUSING FINISH")
+
     def unpauseSim(self):
+        rospy.logdebug("UNPAUSING START")
         rospy.wait_for_service('/gazebo/unpause_physics')
         try:
             self.unpause()
         except rospy.ServiceException as e:
             print ("/gazebo/unpause_physics service call failed")
-    
-    
-    def resetSim(self):
+
+        rospy.logdebug("UNPAUSING FiNISH")
+
+    def create_circle(self, radius=5):
+        self.theta = [k for k in np.arange(0,2*np.pi,0.1)]
+        x = radius*np.cos(self.theta)
+        y = radius*np.sin(self.theta)
+        self.init_circle = [x,y]
+
+    def resetSim(self, robotID=1):
         """
         This was implemented because some simulations, when reseted the simulation
         the systems that work with TF break, and because sometime we wont be able to change them
@@ -57,9 +93,33 @@ class GazeboConnection():
         elif self.reset_world_or_sim == "WORLD":
             rospy.logerr("WORLD RESET")
             self.resetWorld()
+        elif self.reset_world_or_sim == "NO_RESET_SIM":
+            rospy.logerr("NO RESET SIMULATION SELECTED")
         else:
             rospy.logerr("WRONG Reset Option:"+str(self.reset_world_or_sim))
-    
+        self.create_circle(radius=5)
+        machine_name = '/machine_'+str(robotID);
+        self.command_topic = machine_name+"/command"
+        self._cmd_vel_pub = rospy.Publisher(self.command_topic, uav_pose, queue_size=1)
+        outPose = uav_pose()
+        outPose.header.stamp = rospy.Time.now()
+        outPose.header.frame_id="world"
+
+        outPose.POI.x = 0
+        outPose.POI.y = 0
+        outPose.POI.z = 0
+
+        x = np.random.choice(63,1);y = np.random.choice(63,1)
+        r = 6#np.random.randint(6,6);
+        t = np.random.choice(63,1);
+        # outPose.position.x = r*np.cos(self.theta[t[0]])
+        # outPose.position.y = r*np.sin(self.theta[t[0]])
+        # outPose.position.z = -r
+        outPose.position.x = r*np.cos(self.theta[t[0]])
+        outPose.position.y = r*np.sin(self.theta[t[0]])
+        outPose.position.z = -r
+        self._cmd_vel_pub.publish(outPose)
+
     def resetSimulation(self):
         rospy.wait_for_service('/gazebo/reset_simulation')
         try:
@@ -74,16 +134,16 @@ class GazeboConnection():
         except rospy.ServiceException as e:
             print ("/gazebo/reset_world service call failed")
 
-    def init_values(self):
+    def init_values(self, robotID = 1):
 
-        self.resetSim()
+        self.resetSim(robotID)
 
         if self.start_init_physics_parameters:
-            rospy.logwarn("Initialising Simulation Physics Parameters")
+            rospy.logdebug("Initialising Simulation Physics Parameters")
             self.init_physics_parameters()
         else:
             rospy.logerr("NOT Initialising Simulation Physics Parameters")
-        
+
     def init_physics_parameters(self):
         """
         We initialise the physics parameters of the simulation, like gravity,
@@ -110,7 +170,7 @@ class GazeboConnection():
         self._ode_config.max_contacts = 20
 
         self.update_gravity_call()
-        
+
 
     def update_gravity_call(self):
 

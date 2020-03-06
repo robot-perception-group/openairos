@@ -8,4 +8,13 @@ use with your AI learning algorithms.
    :maxdepth: 4
 
    cartpole_environment
-   cube_single_disk_environment
+   cube_environment
+   hopper_environment
+   husarion_environment
+   parrotdrone_environment
+   sawyer_environment
+   shadow_tc_environment
+   summitxl_environment
+   turtlebot2_environment
+   turtlebot3_environment
+   wamv_environment

@@ -5,7 +5,7 @@ import time
 from controller_manager_msgs.srv import SwitchController, SwitchControllerRequest, SwitchControllerResponse
 
 class ControllersConnection():
-    
+
     def __init__(self, namespace, controllers_list):
 
         rospy.logwarn("Start Init ControllersConnection")

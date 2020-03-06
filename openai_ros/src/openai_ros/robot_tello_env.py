@@ -6,7 +6,6 @@
 import rospy
 import gym
 from gym.utils import seeding
-from openai_ros.gazebo_connection import GazeboConnection
 from openai_ros.controllers_connection import ControllersConnection
 from uav_msgs.msg import uav_pose
 import numpy as np
@@ -24,7 +23,7 @@ import socket
 #     rospy.spin()
 
 # https://github.com/openai/gym/blob/master/gym/core.py
-class RobotGazeboEnv(gym.Env):
+class RobotTelloEnv(gym.Env):
 
     def __init__(self, robot_name_space, controllers_list, reset_controls, start_init_physics_parameters=True, reset_world_or_sim="SIMULATION",**kwargs):
 
@@ -38,22 +37,15 @@ class RobotGazeboEnv(gym.Env):
             #os.environ['ROS_PACKAGE_PATH']=ROS_PACKAGE_PATH
             #@HACK Setting ros and gazebo masters can be automated
             #the gazebo master is different for different environment IDs as they can run on multiple computers
-            os.environ['ROS_MASTER_URI'] = "http://"+ROSIP+":1131" + str(env_id)[0]
-            if env_id < 3:
-                GAZEBOIP=ROSIP
-                os.environ['GAZEBO_MASTER_URI'] = "http://"+GAZEBOIP+":1135" + str(env_id)[0]
-            else:
-                GAZEBOIP=ROSIP
-                os.environ['GAZEBO_MASTER_URI'] = "http://"+GAZEBOIP+":1135" + str(env_id)[0]
+            os.environ['ROS_MASTER_URI'] = "http://"+'10.34.28.185'+":1131" + str(env_id)[0]
             os.environ['ROS_IP'] = ROSIP
             os.environ['ROS_HOSTNAME'] = ROSIP
-            rospy.init_node('firefly_env_'+str(env_id)[0]+str(self.robotID), anonymous=True, disable_signals=True)
+            rospy.init_node('tello_env_'+str(env_id)[0]+str(self.robotID), anonymous=True, disable_signals=True)
             print("WORKER NODE " + str(env_id)[0]+str(self.robotID))
 
 
         # To reset Simulations
-        rospy.logdebug("START init RobotGazeboEnv")
-        self.gazebo = GazeboConnection(start_init_physics_parameters,reset_world_or_sim,self.robotID)
+        rospy.logdebug("START init RobotTelloEnv")
         self.controllers_object = ControllersConnection(namespace=robot_name_space, controllers_list=controllers_list)
         self.reset_controls = reset_controls
         self.seed()
@@ -62,7 +54,7 @@ class RobotGazeboEnv(gym.Env):
         self.episode_num = 0
         self.cumulated_episode_reward = 0
 #        self.reward_pub = rospy.Publisher('/openai/reward', RLExperimentInfo, queue_size=1)
-        rospy.logdebug("END init RobotGazeboEnv")
+        rospy.logdebug("END init TelloEnv")
         # self.pretrained_model = PPO2.load("/home/rtallamraju/drl_ws/logs/parallel_ppo_cartesian_att3_try6/snapshots/trained_model.pkl")
         # self.pretrained_model = PPO2.load("/home/rtallamraju/drl_ws/logs/drl_singleagent_try9/snapshots/best_model.pkl")
 
@@ -94,7 +86,7 @@ class RobotGazeboEnv(gym.Env):
         rospy.logdebug("START STEP OpenAIROS")
 
 
-        self.gazebo.unpauseSim()
+        #self.gazebo.unpauseSim()
         self._set_action(action)
         obs = self._get_obs()
         done = self._is_done(obs)
@@ -107,13 +99,13 @@ class RobotGazeboEnv(gym.Env):
         return obs, reward, done, info
 
     def reset(self,robotID=1):
-        rospy.logwarn("Reseting RobotGazeboEnvironment")
+        rospy.logwarn("Reseting RobotTelloEnvironment")
         # if robotID == 1:
         self._reset_sim()
         self._init_env_variables()
         self._update_episode()
         obs = self._get_obs()
-        rospy.logdebug("END Reseting RobotGazeboEnvironment")
+        rospy.logdebug("END Reseting RobotTelloEnvironment")
 
         return obs
 
@@ -178,18 +170,10 @@ class RobotGazeboEnv(gym.Env):
             self.gazebo.pauseSim()
 
         else:
-            # if self.robotID == 1:
             rospy.logwarn("DONT RESET CONTROLLERS")
-            self.gazebo.unpauseSim()
             self._check_all_systems_ready()
-            self._set_init_pose()
-            self.gazebo.pauseSim()
-            self.gazebo.resetSim(self.robotID)
-            self.gazebo.unpauseSim()
+            #self._set_init_pose()
             self._check_all_systems_ready()
-            # self.gazebo.pauseSim()
-            # else:
-                # self.gazebo.unpauseSim()
 
         rospy.logdebug("RESET SIM END")
         return True
