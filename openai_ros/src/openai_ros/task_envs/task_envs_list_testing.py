@@ -138,6 +138,24 @@ def RegisterOpenAI_Ros_Env(task_env):
         # import our training environment
         from openai_ros.task_envs.firefly import singleagent_center    
 
+    elif task_env == 'SingleAgentEvaluation-v2':
+        print('Entering:'+task_env)
+        register(
+            id=task_env,
+            entry_point='openai_ros.task_envs.firefly.singleagent_aircap:DeepFollowEnv'
+        )
+        # import our training environment
+        from openai_ros.task_envs.firefly import singleagent_aircap   
+
+    elif task_env == 'SingleAgentEvaluation-v3':
+        print('Entering:'+task_env)
+        register(
+            id=task_env,
+            entry_point='openai_ros.task_envs.firefly.singleagent_center_aircap:DeepFollowEnv'
+        )
+        # import our training environment
+        from openai_ros.task_envs.firefly import singleagent_center_aircap   
+
     elif task_env == 'MultiAgentEvaluation-v0':
         print('Entering:'+task_env)
         register(
@@ -165,6 +183,16 @@ def RegisterOpenAI_Ros_Env(task_env):
         # import our training environment
         from openai_ros.task_envs.firefly import meta_training
 
+    elif task_env == 'TrainMeta-v1':
+        print('Entering:'+task_env)
+        register(
+            id=task_env,
+            entry_point='openai_ros.task_envs.firefly.meta_aircap:DeepFollowEnv'
+        )
+        # import our training environment
+        from openai_ros.task_envs.firefly import meta_aircap
+
+
     elif task_env == 'Tello-v0':
         print('Entering:'+task_env)
         register(
@@ -172,7 +200,16 @@ def RegisterOpenAI_Ros_Env(task_env):
             entry_point='openai_ros.task_envs.firefly.tello:DeepFollowEnv'
         )
         # import our training environment
-        from openai_ros.task_envs.firefly import tello
+        from openai_ros.task_envs.tello import tello
+
+    elif task_env == 'AisimSingleAgent-v0':
+        print('Entering:'+task_env)
+        register(
+            id=task_env,
+            entry_point='openai_ros.task_envs.airsim.airsim_singleagent:DeepFollowEnv'
+        )
+        # import our training environment
+        from openai_ros.task_envs.airsim import airsim_singleagent
 
     else:
         result = False

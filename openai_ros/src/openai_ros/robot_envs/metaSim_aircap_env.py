@@ -70,13 +70,9 @@ class FireflyMultiAgentGTEnv(robot_gazebo_env.RobotGazeboEnv):
         Args:
         """
         rospy.logdebug("Start FireflyEnv INIT...")
+        rospy.logwarn('Setting Up Firefly ENV')
         # Variables that we give through the constructor.
         # None in this case
-
-        # We launch the ROSlaunch that spawns the robot into the world
-        # ROSLauncher(rospackage_name="turtlebot_gazebo",
-        #             launch_file_name="put_robot_in_world.launch",
-        #             ros_ws_abspath=ros_ws_abspath)
 
 
         # Internal Vars
@@ -92,6 +88,7 @@ class FireflyMultiAgentGTEnv(robot_gazebo_env.RobotGazeboEnv):
                                             reset_controls=False,
                                             start_init_physics_parameters=False,
                                             reset_world_or_sim="WORLD",**kwargs)
+
         machine_name = '/machine_'+str(self.robotID);rotors_machine_name = '/firefly_'+str(self.robotID)
         self.rotors_machine_name = rotors_machine_name
         self.num_robots=2
@@ -103,7 +100,11 @@ class FireflyMultiAgentGTEnv(robot_gazebo_env.RobotGazeboEnv):
 
         self.pose_topic = machine_name+"/pose"
 
+        self.pose_neighbor_topic = neighbor_name+"/pose"
+
         self.velocity_topic = rotors_machine_name+"/ground_truth/odometry"
+
+        self.velocity_neighbor_topic = rotors_neighbor_name+"/ground_truth/odometry"
 
         self.gt_pose_topic = machine_name+"/pose/groundtruth"
 
@@ -150,8 +151,8 @@ class FireflyMultiAgentGTEnv(robot_gazebo_env.RobotGazeboEnv):
         self.alphapose_detection = machine_name+"/detection"
 
         self.alphapose_neighbor_detection = neighbor_name+"/detection"
-                
-        self.hmr_topic = machine_name+"/multihmr_joints"
+
+        self.mhmr_topic = "/multihmr_joints"
 
         self.camera_info = rotors_machine_name+rotors_machine_name+"/xtion/rgb/camera_info"
 
@@ -179,50 +180,68 @@ class FireflyMultiAgentGTEnv(robot_gazebo_env.RobotGazeboEnv):
         pose = message_filters.Subscriber(self.pose_topic, uav_pose)
         self.pose_cache = message_filters.Cache(pose,100)
 
+        pose_neighbor = message_filters.Subscriber(self.pose_neighbor_topic, uav_pose)
+        self.pose_neighbor_cache = message_filters.Cache(pose_neighbor,100)
+
         velocity = message_filters.Subscriber(self.velocity_topic, Odometry)
-        self.velocity_cache = message_filters.Cache(velocity,100)
-        
+        self.velocity_cache = message_filters.Cache(velocity,300)
+
+        velocity_neighbor = message_filters.Subscriber(self.velocity_neighbor_topic, Odometry)
+        self.velocity_neighbor_cache = message_filters.Cache(velocity_neighbor,300)
+
         rospy.Subscriber(self.gt_pose_topic, uav_pose, self._gt_pose_callback)
-        rospy.Subscriber(self.gt_neighbor_pose_topic, uav_pose, self._gt_neighbor_pose_callback)
+
+        rospy.Subscriber(self.gt_neighbor_pose_topic, uav_pose,self._gt_neighbor_pose_callback)
+        # self.gt_neighbor_cache = message_filters.Cache(gt_neighbor,300);
+
+
         #Estimated Target Pose
         target = message_filters.Subscriber(self.target_topic, PoseWithCovarianceStamped)
         self.target_cache  = message_filters.Cache(target,100)
-        
+
+        #GT Target Pose and Velocity
+        gt_target = message_filters.Subscriber(self.gt_target_topic, Odometry)
+        self.gt_target_cache = message_filters.Cache(gt_target,300)
+
         #Estimated Target Velocity
         target_velocity = message_filters.Subscriber(self.target_velocity_topic, TwistWithCovarianceStamped)
         self.target_velocity_cache = message_filters.Cache(target_velocity,100)
 
-        #GT Target Pose and Velocity
-        gt_target = message_filters.Subscriber(self.gt_target_topic, Odometry)
-        self.gt_target_cache = message_filters.Cache(gt_target,100)
-        
         rospy.Subscriber(self.detections_feedback_topic, NeuralNetworkFeedback, self._detections_feedback_callback)
 
+
         noisy_joints = message_filters.Subscriber(self.noisy_joints_topic, AlphaRes)
-        self.noisy_joints_cache = message_filters.Cache(noisy_joints,  100); self.noisy_joints_cache.registerCallback(self._noisy_joints_callback)
+        self.noisy_joints_cache = message_filters.Cache(noisy_joints, 300);self.noisy_joints_cache.registerCallback(self._noisy_joints_callback)
 
         noisy_joints_neighbor = message_filters.Subscriber(self.noisy_joints_neighbor_topic, AlphaRes)
-        self.noisy_joints_neighbor_cache = message_filters.Cache(noisy_joints_neighbor, 100); self.noisy_joints_neighbor_cache.registerCallback(self._noisy_joints_neighbor_callback)
+        self.noisy_joints_neighbor_cache = message_filters.Cache(noisy_joints_neighbor, 300);self.noisy_joints_neighbor_cache.registerCallback(self._noisy_joints_neighbor_callback)
 
         noisy_bbox = message_filters.Subscriber(self.noisy_bbox_topic, AlphaRes)
-        self.noisy_bbox_cache = message_filters.Cache(noisy_bbox, 100);self.noisy_bbox_cache.registerCallback(self._noisy_bbox_callback)
+        self.noisy_bbox_cache = message_filters.Cache(noisy_bbox, 300);self.noisy_bbox_cache.registerCallback(self._noisy_bbox_callback)
 
         noisy_bbox_neighbor = message_filters.Subscriber(self.noisy_bbox_neighbor_topic, AlphaRes)
-        self.noisy_bbox_neighbor_cache = message_filters.Cache(noisy_bbox_neighbor, 100);self.noisy_bbox_neighbor_cache.registerCallback(self._noisy_bbox_neighbor_callback)
-
-        hmr = message_filters.Subscriber(self.hmr_topic, PoseArray)
-        self.hmr_cache = message_filters.Cache(hmr, 100);
+        self.noisy_bbox_neighbor_cache = message_filters.Cache(noisy_bbox_neighbor, 300);self.noisy_bbox_neighbor_cache.registerCallback(self._noisy_bbox_neighbor_callback)
 
         rospy.Subscriber(self.noisy_detection, Int16,self._noisy_detection_callback)
         rospy.Subscriber(self.noisy_neighbor_detection, Int16,self._noisy_neighbor_detection_callback)
 
 
-        rospy.Subscriber(self.alphapose_topic, AlphaRes, self._alphapose_callback)
-        rospy.Subscriber(self.alphapose_neighbor_topic, AlphaRes, self._alphapose_neighbor_callback)
-        alpha = message_filters.Subscriber(self.alphapose_bbox_topic, AlphaRes)
-        self.alpha_cache = message_filters.Cache(alpha,100)
-        
-        rospy.Subscriber(self.alphapose_bbox_neighbor_topic, AlphaRes, self._alphapose_bbox_neighbor_callback)
+        alphapose = message_filters.Subscriber(self.alphapose_topic, AlphaRes)
+        self.alphapose_cache = message_filters.Cache(alphapose,300);self.alphapose_cache.registerCallback(self._alphapose_callback)
+
+        alphapose_neighbor = message_filters.Subscriber(self.alphapose_neighbor_topic, AlphaRes)
+        self.alphapose_neighbor_cache= message_filters.Cache(alphapose_neighbor,100);self.alphapose_neighbor_cache.registerCallback(self._alphapose_neighbor_callback)
+
+        alphapose_bbox = message_filters.Subscriber(self.alphapose_bbox_topic, AlphaRes)
+        self.alphapose_bbox_cache= message_filters.Cache(alphapose_bbox,300)
+
+        alphapose_bbox_neighbor = message_filters.Subscriber(self.alphapose_bbox_neighbor_topic, AlphaRes)
+        self.alphapose_bbox_neighbor_cache = message_filters.Cache(alphapose_bbox_neighbor,300)
+
+        mhmr = message_filters.Subscriber(self.mhmr_topic, PoseArray)
+        self.mhmr_cache = message_filters.Cache(mhmr,300)
+
+
         rospy.Subscriber(self.alphapose_detection, Int16, self._alphapose_detection_callback)
         rospy.Subscriber(self.alphapose_neighbor_detection, Int16, self._alphapose_neighbor_detection_callback)
         rospy.Subscriber(self.command_topic, uav_pose, self._command_callback)
@@ -252,15 +271,6 @@ class FireflyMultiAgentGTEnv(robot_gazebo_env.RobotGazeboEnv):
 
         r = 8#
         t = np.random.choice(63,1);
-        # outPose.position.x = r*np.cos(self.theta[t[0]])
-        # outPose.position.y = r*np.sin(self.theta[t[0]])
-        # outPose.position.z = -r
-        # if self.robotID==2:
-        #     #[6,0,-6]
-        #     outPose.position.x = r*np.cos(self.theta[t[0]])
-        #     outPose.position.y = r*np.sin(self.theta[t[0]])
-        #     outPose.position.z = -r
-        # else:
         outPose.position.x = r*np.cos(self.theta[t[0]])
         outPose.position.y = r*np.sin(self.theta[t[0]])
         outPose.position.z = -r
@@ -279,11 +289,8 @@ class FireflyMultiAgentGTEnv(robot_gazebo_env.RobotGazeboEnv):
     def _callback(self,noisy_joints,noisy_joints_neighbor):
         self.noisy_joints = noisy_joints
         self.noisy_joints_neighbor = noisy_joints_neighbor
-        # self.noisy_bbox = noisy_bbox
-        # self.noisy_bbox_neighbor = noisy_bbox_neighbor
 
-
-    def create_circle(self, radius=8):
+    def create_circle(self, radius=5):
         self.theta = [k for k in np.arange(0,6.28,0.1)]
         x = radius*np.cos(self.theta)
         y = radius*np.sin(self.theta)
@@ -296,16 +303,15 @@ class FireflyMultiAgentGTEnv(robot_gazebo_env.RobotGazeboEnv):
         self._check_gt_target_ready()
         # self._check_target_vel_ready()
         # self._check_feedback_ready()
-        #self._check_alphapose_ready()
-        #self._check_neighbor_alphapose_ready()
-        # self._check_neighbor_ready()
-        # self._check_camera_rgb_image_info_ready()
-        # self._check_camera_neighbor_rgb_image_info_ready()
-        #self._check_noisy_joints()
+        # self._check_alphapose_ready()
+        # self._check_neighbor_alphapose_ready()
+        #self._check_mhmr_ready()
+        self._check_neighbor_ready()
+        #self._check_camera_rgb_image_info_ready()
+        #self._check_camera_neighbor_rgb_image_info_ready()
+        # self._check_noisy_joints()
         # self._check_noisy_joints_neighbor()
         #self._check_bbox_ready()
-
-        # self._check_hmr_ready()
         #self._check_neighbor_bbox_ready()
 
         rospy.logdebug("ALL MODULES READY")
@@ -414,6 +420,19 @@ class FireflyMultiAgentGTEnv(robot_gazebo_env.RobotGazeboEnv):
 
         return self.feedback
 
+    def _check_mhmr_ready(self):
+        self.mhmr = None
+        rospy.logdebug("Waiting for /alphapose to be READY...")
+        while self.mhmr is None and not rospy.is_shutdown():
+            try:
+                self.mhmr = rospy.wait_for_message(self.mhmr_topic, PoseArray, timeout=5.0)
+                rospy.logdebug("Current /multihmr READY=>")
+
+            except:
+                rospy.logerr("Current "+self.mhmr_topic+" not ready yet in env"+str(self.env_id)+", retrying for getting target")
+
+        return self.mhmr
+
     def _check_alphapose_ready(self):
         self.alphapose = None
         rospy.logdebug("Waiting for /alphapose to be READY...")
@@ -423,7 +442,7 @@ class FireflyMultiAgentGTEnv(robot_gazebo_env.RobotGazeboEnv):
                 rospy.logdebug("Current /alphapose READY=>")
 
             except:
-                rospy.logerr("Current "+self.alphapose_topic+" not ready yet, retrying for getting target")
+                rospy.logerr("Current "+self.alphapose_topic+" not ready yet in env"+str(self.env_id)+", retrying for getting target")
 
         return self.alphapose
 
@@ -436,7 +455,7 @@ class FireflyMultiAgentGTEnv(robot_gazebo_env.RobotGazeboEnv):
                 rospy.logdebug("Current /alphapose READY=>")
 
             except:
-                rospy.logerr("Current neighbor /alphapose not ready yet, retrying for getting target")
+                rospy.logerr("Current neighbor /alphapose not ready yet in env"+str(self.env_id)+", retrying for getting target")
 
         return self.alphapose_neighbor
 
@@ -452,17 +471,6 @@ class FireflyMultiAgentGTEnv(robot_gazebo_env.RobotGazeboEnv):
                 self.reset()
         return self.bbox
 
-    def _check_hmr_ready(self):
-        self.hmr_joints = None
-        rospy.logdebug("Waiting for /hmr to be READY...")
-        while self.hmr_joints is None and not rospy.is_shutdown():
-            try:
-                self.hmr_joints = rospy.wait_for_message(self.hmr_topic, PoseArray, timeout=30.0)
-                rospy.logdebug("Current /hmr READY=>")
-            except:
-                rospy.logerr("Current "+self.hmr_topic+" not ready yet for env:"+str(self.env_id)+", retrying for getting target")
-        return self.hmr_joints
-
     def _check_neighbor_bbox_ready(self):
         self.bbox_neighbor = None
         rospy.logdebug("Waiting for neighbor /alphapose to be READY...")
@@ -477,15 +485,12 @@ class FireflyMultiAgentGTEnv(robot_gazebo_env.RobotGazeboEnv):
 
     def _check_neighbor_ready(self):
         self.gt_neighbor_odom = None
-        rospy.logdebug("Waiting for /machine_2/pose to be READY...")
         while self.gt_neighbor_odom is None and not rospy.is_shutdown():
             try:
-                self.gt_neighbor_odom = rospy.wait_for_message(self.gt_neighbor_pose_topic, uav_msgs, timeout=5.0)
-                rospy.logdebug("Current /machine_2/pose READY=>")
-
+                self.gt_neighbor_odom = rospy.wait_for_message(self.gt_neighbor_pose_topic, uav_pose, timeout=100.0)
+                rospy.logdebug("Current "+ self.gt_neighbor_pose_topic+"/pose READY=>")
             except:
-                rospy.logerr("Current"+self.gt_neighbor_pose_topic+" not ready yet, retrying for getting target")
-
+                rospy.logerr("Current "+self.gt_neighbor_pose_topic+" not ready yet, retrying for getting target")
         return self.gt_neighbor_odom
 
     def _check_camera_depth_image_raw_ready(self):
@@ -715,8 +720,20 @@ class FireflyMultiAgentGTEnv(robot_gazebo_env.RobotGazeboEnv):
 
     # Methods that the TrainingEnvironment will need.
     # ----------------------------
-    def move_base(self, action, horizon, update_rate=100, init= False):
+    def move_base(self, action, horizon=1, update_rate=100, init= False):
+        """
+        It will move the base based on the linear and angular velocties given.
+        :param action: u_x, u_y, u_z
+        :param horizon: Prediction horizon for MAV always(1)
+        :param update_rate: Rate at which we check the odometry.
+        :return:
+        """
         import tf
+
+        #use LTI dynamics with A = I with velocity control input
+        # for k in range(horizon):
+        #     outPose.position.x += outPose.velocity.x/update_rate
+        #     outPose.position.y += outPose.velocity.y/update_rate
 
         outPose = uav_pose()
         outPose.header.stamp = rospy.Time.now()
@@ -727,14 +744,14 @@ class FireflyMultiAgentGTEnv(robot_gazebo_env.RobotGazeboEnv):
             outPose.POI.z = 0
 
             r = 8
-            t = np.random.choice(63,1);
+            t = np.random.choice(5,1);
+
             outPose.position.x = r*np.cos(self.theta[t[0]])
             outPose.position.y = r*np.sin(self.theta[t[0]])
             outPose.position.z = -r
 
         else:
-            stamp = rospy.Time.now()
-            (trans,rot) = self.listener.lookupTransform( 'world_ENU',self.rotors_machine_name+'/base_link',rospy.Time(0) )
+            (trans,rot) = self.listener.lookupTransform( 'world_ENU',self.rotors_machine_name+'/base_link', rospy.Time(0))
             (r,p,y) = tf.transformations.euler_from_quaternion(rot)
             homogeneous_matrix = tf.transformations.euler_matrix(0,0,y,axes='sxyz')
             homogeneous_matrix[0:3,3] = trans
@@ -746,49 +763,32 @@ class FireflyMultiAgentGTEnv(robot_gazebo_env.RobotGazeboEnv):
             rospy.logwarn("END ACTION ==>"+str(action))
 
             gt_odom = self.get_gt_odom()
-            
-            # Using MPC
-            # goal_MPC = np.array([self.mpc_command_data.position.x,self.mpc_command_data.position.y, self.mpc_command_data.position.z, 1])
-            # action_MPC = np.dot(np.linalg.inv(homogeneous_matrix),goal_MPC)
-            # if np.isnan(action_MPC).any():
-            #     firefly_odom = self.get_firefly_odom()
-            #     action_MPC=np.array([gt_odom.position.x,gt_odom.position.y,gt_odom.position.z])
-            #DRL output
-            act = []
-            act.extend([action[0],action[1]])
-            act.extend([0])
-            # if self.robotID==1:
+
+            act  = np.append(action[0:2],0)
             goal = homogeneous_matrix.dot(np.concatenate((np.array(act),np.array([1]))))
-            # goal = homogeneous_matrix.dot(np.concatenate((np.array(action)+np.array([action_MPC[0],action_MPC[1],action_MPC[2]]),np.array([1]))))
-            # goal = homogeneous_matrix.dot(np.concatenate((action_MPC[0:3],np.array([1]))))
-            gt_target = self.get_gt_target(stamp)
-            # outPose.POI.x = gt_target.pose.pose.position.x
-            # outPose.POI.y = gt_target.pose.pose.position.y
-            # outPose.POI.z = gt_target.pose.pose.position.z            
-            # rospy.logwarn("END ACTION MPC==>"+str(action_MPC))
+
             rospy.logwarn("END ACTION==>"+str(action))
 
 
-            targetz = self.gt_target_cache.getElemBeforeTime(stamp)
+            targetz = self.gt_target_cache.getElemBeforeTime(rospy.Time.now())
 
+            #Publish Control Command with Fixed Height of 8m
             outPose.position.x = goal[0]
             outPose.position.y = goal[1]
-            outPose.position.z = -5+targetz.pose.pose.position.z
-
+            outPose.position.z = -8+targetz.pose.pose.position.z
 
             rospy.logwarn("Current MAV Pose ==>x:"+str(gt_odom.position.x)+", y:"+str(gt_odom.position.y)+", z:"+str(gt_odom.position.z))
 
 
         rospy.logdebug("Firefly Command>>" + str(outPose))
         self._check_publishers_connection()
-        #publish desired position and velocity
+
         self._cmd_vel_pub.publish(outPose)
-        rate = rospy.Rate(update_rate)  # 10hz
+        rate = rospy.Rate(update_rate)
         try:
             rate.sleep()
         except:
             pass
-
 
 
     def wait_until_twist_achieved(self, cmd_vel_value, epsilon, update_rate, min_laser_distance=-1):
@@ -829,20 +829,34 @@ class FireflyMultiAgentGTEnv(robot_gazebo_env.RobotGazeboEnv):
         #                 break
         # return robot_has_crashed
 
-    def get_gt_odom(self):
-        return self.gt_odom
 
     def get_odom(self,stamp=None):
         if stamp == None:
             stamp = rospy.Time.now()
         return self.pose_cache.getElemBeforeTime(stamp)
 
+    def get_neighbor_odom(self,stamp=None):
+        if stamp == None:
+            stamp = rospy.Time.now()
+        return self.pose_neighbor_cache.getElemBeforeTime(stamp)
+
     def get_velocity(self,stamp=None):
         if stamp == None:
-            stamp = rospy.Time.now()            
+            stamp = rospy.Time.now()
         return self.velocity_cache.getElemBeforeTime(stamp)
 
-    def get_neighbor_gt_odom(self):
+    def get_velocity_neighbor(self,stamp=None):
+        if stamp == None:
+            stamp = rospy.Time.now()
+        return self.velocity_neighbor_cache.getElemBeforeTime(stamp)
+
+    def get_gt_odom(self):
+        return self.gt_odom
+
+    def get_neighbor_gt_odom(self,stamp=None):
+        if stamp is None:
+            stamp = rospy.Time.now()
+        # return self.gt_neighbor_cache.getElemBeforeTime(stamp)
         return self.gt_neighbor_odom
 
     def get_firefly_odom(self):
@@ -860,7 +874,7 @@ class FireflyMultiAgentGTEnv(robot_gazebo_env.RobotGazeboEnv):
 
     def get_gt_target(self,stamp=None):
         if stamp == None:
-            stamp = rospy.Time.now()          
+            stamp = rospy.Time.now()
         return self.gt_target_cache.getElemBeforeTime(stamp)
 
     def get_detections_feedback(self):
@@ -873,24 +887,19 @@ class FireflyMultiAgentGTEnv(robot_gazebo_env.RobotGazeboEnv):
 
 
     def get_noisy_joints_neighbor(self,stamp=None):
-        if stamp == None:
+        if stamp is None:
             stamp = rospy.Time.now()
         return self.noisy_joints_neighbor_cache.getElemBeforeTime(stamp)
 
     def get_noisy_bbox(self,stamp=None):
-        if stamp == None:
+        if stamp is None:
             stamp = rospy.Time.now()
         return self.noisy_bbox_cache.getElemBeforeTime(stamp)
 
     def get_noisy_bbox_neighbor(self,stamp=None):
-        if stamp == None:
+        if stamp is None:
             stamp = rospy.Time.now()
         return self.noisy_bbox_neighbor_cache.getElemBeforeTime(stamp)
-    
-    def get_hmr_joints(self,stamp=None):
-        if stamp==None:
-            stamp = rospy.Time.now()
-        return self.hmr_cache.getElemBeforeTime(stamp)
 
     def get_noisy_detection(self):
         return self.noisy_detection
@@ -898,19 +907,30 @@ class FireflyMultiAgentGTEnv(robot_gazebo_env.RobotGazeboEnv):
     def get_noisy_neighbor_detection(self):
         return self.noisy_neighbor_detection
 
-    def get_alphapose(self):
-        return self.alphapose
+    def get_alphapose(self,stamp=None):
+        if stamp is None:
+            stamp = rospy.Time.now()
+        return self.alphapose_cache.getElemBeforeTime(stamp)
 
-    def get_alphapose_neighbor(self):
-        return self.alphapose_neighbor
+    def get_alphapose_neighbor(self,stamp=None):
+        if stamp is None:
+            stamp = rospy.Time.now()
+        return self.alphapose_neighbor_cache.getElemBeforeTime(stamp)
 
     def get_alphapose_bbox(self,stamp=None):
-        if stamp == None:
+        if stamp is None:
             stamp = rospy.Time.now()
-        return self.alpha_cache.getElemBeforeTime(stamp)
+        return self.alphapose_bbox_cache.getElemBeforeTime(stamp)
 
-    def get_alphapose_bbox_neighbor(self):
-        return self.bbox_neighbor
+    def get_alphapose_bbox_neighbor(self,stamp=None):
+        if stamp is None:
+            stamp = rospy.Time.now()
+        return self.alphapose_bbox_neighbor_cache.getElemBeforeTime(stamp)
+
+    def get_mhmr_joints(self,stamp=None):
+        if stamp is None:
+            stamp = rospy.Time.now()
+        return self.mhmr_cache.getElemBeforeTime(stamp)
 
     def get_alphapose_detection(self):
         return self.detection
